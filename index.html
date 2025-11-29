@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+
+<!-- VIEWPORT FIJO PARA QUE ANDROID NO AGRANDE NADA -->
+<meta name="viewport" content="width=720, height=1600, user-scalable=no">
+
+<title>Teclado Android</title>
+
+<style>
+  html, body {
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    position:fixed;
+    touch-action:none;
+    background:#000;
+    -webkit-text-size-adjust:none;
+  }
+
+  .screen{
+    position:relative;
+    width:720px;
+    height:1600px;
+    overflow:hidden;
+    margin:0 auto;
+    background-image:url('fondo.png');
+    background-size:720px 1600px;
+    background-repeat:no-repeat;
+  }
+
+  .overlay {
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.55);
+    display:none;
+    z-index:20000;
+  }
+
+  /* ---- POPUP DE HUELLA ---- */
+  .overlay-huella {
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.55);
+    display:none;
+    z-index:10005;
+  }
+
+  .popup-huella {
+    position:absolute;
+    left:50%;
+    top:1000px;
+    transform:translateX(-50%);
+    width:680px;
+    height:400px;
+    background:rgba(20, 20, 20, 0.95);
+    border-radius:35px;
+    display:none;
+    z-index:10010;
+    color:white;
+    font-family:Arial, sans-serif;
+    text-align:center;
+    padding-top:40px;
+    font-size:34px;
+    font-weight:bold;
+  }
+
+  .spinner-huella {
+    border: 6px solid #ffffff;
+    border-top: 6px solid #03bfb8;
+    border-radius: 50%;
+    width: 65px;
+    height: 65px;
+    margin: 50px auto 15px auto;
+    animation: spin 0.5s linear infinite;
+  }
+
+  .cancelar-huella {
+    position:absolute;
+    bottom:25px;
+    left:40px;
+    font-size:30px;
+    color:#03bfb8;
+    font-family:Arial, sans-serif;
+  }
+
+  .title {
+    position:absolute;
+    left:50%;
+    top:960px;
+    transform:translateX(-50%);
+    font-size:38px;
+    font-family:Arial, sans-serif;
+    font-weight:700;   /* ✔ ENGROSADO */
+    color:#4f1972;
+    user-select:none;
+    pointer-events:none;
+  }
+
+  .pin-dots{
+    position:absolute;
+    top:970px;
+    left:50%;
+    transform:translateX(-50%);
+    display:none;
+    gap:45px;
+  }
+
+  .dot{
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    background:#999;
+    opacity:0.9;
+  }
+
+  .dot.filled{
+    background:#000;
+    opacity:1;
+  }
+
+  .key{
+    position:absolute;
+    width:180px;
+    height:90px;
+    border-radius:18px;
+    transform:translate(-50%, -50%);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+  }
+
+  .key span{
+    font-size:42px;
+    font-family:"Arial Rounded MT Bold", Arial, sans-serif;
+    font-weight:700;
+    color:#333;
+    user-select:none;
+    pointer-events:none;
+  }
+
+  .key::after{
+    content:"";
+    position:absolute;
+    width:100%;
+    height:100%;
+    border-radius:18px;
+    background:rgba(0,0,0,0);
+    transform: translateY(-4px);
+    transition: background 0.12s;
+    pointer-events:none;
+  }
+
+  .key.pressed::after{
+    background:rgba(53, 53, 53, 0.06);
+  }
+
+  .popup {
+    position: absolute;
+    left: 50%;
+    top: 645px;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.99);
+    padding: 55px 100px;
+    border-radius: 30px;
+    color: #000;
+    font-family: Arial, sans-serif;
+    font-size: 32px;
+    font-weight: bold;
+    text-align:center;
+    display: none;
+    z-index:20001;
+    white-space: nowrap;
+  }
+
+  .spinner {
+    border: 6px solid #ffffff;
+    border-top: 6px solid #03bfb8;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 25px auto;
+    animation: spin 0.5s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+</style>
+</head>
+
+<body>
+
+<div class="screen">
+
+  <img src="huella_animada.gif" id="huellaGif" style="
+      position:absolute;
+      left:128px;
+      top:1410px;
+      width:50px;
+      height:50px;
+      z-index:9999;
+      pointer-events:auto;
+  ">
+
+  <div class="overlay" id="overlay"></div>
+
+  <div class="overlay-huella" id="overlayHuella"></div>
+
+  <div class="popup-huella" id="popupHuella">
+      Esta opción no está disponible
+      <div class="spinner-huella"></div>
+
+      <div style="margin-top:40px; font-size:22px; color:#ccc;">
+        Para su seguridad, ingrese su clave de 6 dígitos.
+      </div>
+
+      <div class="cancelar-huella" id="cancelarHuella">Cancelar</div>
+  </div>
+
+  <div class="title" id="title">Ingresa tu clave</div>
+
+  <div class="popup" id="popup">
+      <div class="spinner"></div>
+      Validando datos
+  </div>
+
+  <div class="pin-dots" id="pinDots">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+
+  <div class="key" data-num="3" style="left:152.5px; top:1116.5px;"><span>3</span></div>
+  <div class="key" data-num="7" style="left:355.5px; top:1116.5px;"><span>7</span></div>
+  <div class="key" data-num="1" style="left:558.5px; top:1116.5px;"><span>1</span></div>
+
+  <div class="key" data-num="9" style="left:152.5px; top:1224px;"><span>9</span></div>
+  <div class="key" data-num="4" style="left:355.5px; top:1224px;"><span>4</span></div>
+  <div class="key" data-num="0" style="left:558.5px; top:1224px;"><span>0</span></div>
+
+  <div class="key" data-num="6" style="left:152.5px; top:1328px;"><span>6</span></div>
+  <div class="key" data-num="8" style="left:355.5px; top:1328px;"><span>8</span></div>
+  <div class="key" data-num="2" style="left:558.5px; top:1328px;"><span>2</span></div>
+
+  <div class="key" data-num="5" style="left:355.5px; top:1432.5px;"><span>5</span></div>
+
+  <div id="deleteArea" style="position:absolute; left:558.5px; top:1403.5px; width:180px; height:90px; transform:translate(-50%, -50%);"></div>
+
+</div>
+
+<script>
+  document.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+  }, { passive: false });
+
+  const title = document.getElementById("title");
+  const pinDots = document.getElementById("pinDots");
+  const dots = document.querySelectorAll(".dot");
+  const popup = document.getElementById("popup");
+  const overlay = document.getElementById("overlay");
+
+  let pinIndex = 0;
+
+  function resetPIN() {
+    dots.forEach(d => d.classList.remove("filled"));
+    pinIndex = 0;
+    title.style.display = "block";
+    pinDots.style.display = "none";
+  }
+
+  document.querySelectorAll('.key').forEach(btn => {
+    btn.addEventListener('click', () => {
+
+      btn.classList.add('pressed');
+      setTimeout(() => btn.classList.remove('pressed'), 140);
+
+      if(pinIndex === 0){
+        title.style.display = "none";
+        pinDots.style.display = "flex";
+      }
+
+      if(pinIndex < 6){
+        dots[pinIndex].classList.add("filled");
+        pinIndex++;
+      }
+
+      if(pinIndex === 6){
+        popup.style.display = "block";
+        overlay.style.display = "block";
+
+        setTimeout(() => {
+          popup.style.display = "none";
+          overlay.style.display = "none";
+          resetPIN();
+        }, 6000);
+      }
+
+    });
+  });
+
+  const deleteArea = document.getElementById("deleteArea");
+
+  deleteArea.addEventListener('click', () => {
+    if(pinIndex === 0) return;
+
+    pinIndex--;
+    dots[pinIndex].classList.remove("filled");
+
+    if(pinIndex === 0){
+      title.style.display = "block";
+      pinDots.style.display = "none";
+    }
+  });
+
+  /* === POPUP HUELLA === */
+  const huellaGif = document.getElementById("huellaGif");
+  const popupHuella = document.getElementById("popupHuella");
+  const overlayHuella = document.getElementById("overlayHuella");
+  const cancelarHuella = document.getElementById("cancelarHuella");
+
+  huellaGif.addEventListener("click", () => {
+    popupHuella.style.display = "block";
+    overlayHuella.style.display = "block";
+  });
+
+  cancelarHuella.addEventListener("click", () => {
+    popupHuella.style.display = "none";
+    overlayHuella.style.display = "none";
+  });
+
+  overlayHuella.addEventListener("click", () => {
+    popupHuella.style.display = "none";
+    overlayHuella.style.display = "none";
+  });
+
+</script>
+
+</body>
+</html>
