@@ -1,354 +1,329 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Login Security - Index</title>
+    <style>
+        :root {
+            --mario-white: #ffffff;
+            --mario-yellow: #ffcc00;
+            --error-red: #ff4444;
+            --popup-bg: rgba(255, 255, 255, 0.95);
+            --loader-grey: #888888;
+        }
 
-<!-- VIEWPORT FIJO PARA QUE ANDROID NO AGRANDE NADA -->
-<meta name="viewport" content="width=720, height=1600, user-scalable=no">
+        * { box-sizing: border-box; }
 
-<title>Teclado Android</title>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            font-family: 'Segoe UI', sans-serif;
+            background: url('fondo.png') no-repeat center center fixed;
+            background-size: cover;
+            background-color: #1a1a1a;
+        }
 
-<style>
-  html, body {
-    margin:0;
-    padding:0;
-    width:100%;
-    height:100%;
-    overflow:hidden;
-    position:fixed;
-    touch-action:none;
-    background:#000;
-    -webkit-text-size-adjust:none;
-  }
+        .overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; 
+            align-items: center;
+            padding-top: 10vh; 
+        }
 
-  .screen{
-    position:relative;
-    width:720px;
-    height:1600px;
-    overflow:hidden;
-    margin:0 auto;
-    background-image:url('fondo.png');
-    background-size:720px 1600px;
-    background-repeat:no-repeat;
-  }
+        .marquee-box {
+            width: 280px; 
+            overflow: hidden;
+            white-space: nowrap;
+            margin-bottom: 35vh;
+            display: flex;
+        }
 
-  .overlay {
-    position:absolute;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.55);
-    display:none;
-    z-index:20000;
-  }
+        .marquee-content {
+            display: flex;
+            animation: scrollLeft 18s linear infinite;
+        }
 
-  /* ---- POPUP DE HUELLA ---- */
-  .overlay-huella {
-    position:absolute;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.55);
-    display:none;
-    z-index:10005;
-  }
+        .marquee-content span {
+            color: var(--mario-white);
+            font-size: 1.1rem;
+            font-weight: 300; 
+            padding-right: 60px; 
+        }
 
-  .popup-huella {
-    position:absolute;
-    left:50%;
-    top:1000px;
-    transform:translateX(-50%);
-    width:680px;
-    height:400px;
-    background:rgba(20, 20, 20, 0.95);
-    border-radius:35px;
-    display:none;
-    z-index:10010;
-    color:white;
-    font-family:Arial, sans-serif;
-    text-align:center;
-    padding-top:40px;
-    font-size:34px;
-    font-weight:bold;
-  }
+        @keyframes scrollLeft {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); } 
+        }
 
-  .spinner-huella {
-    border: 6px solid #ffffff;
-    border-top: 6px solid #03bfb8;
-    border-radius: 50%;
-    width: 65px;
-    height: 65px;
-    margin: 50px auto 15px auto;
-    animation: spin 0.5s linear infinite;
-  }
+        #game-popup {
+            position: absolute;
+            top: -95px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--popup-bg);
+            color: #333;
+            min-width: 220px; 
+            padding: 15px 40px; 
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            display: none; 
+            flex-direction: column;
+            align-items: center;
+            border: none;
+            z-index: 100;
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
 
-  .cancelar-huella {
-    position:absolute;
-    bottom:25px;
-    left:40px;
-    font-size:30px;
-    color:#03bfb8;
-    font-family:Arial, sans-serif;
-  }
+        .loader {
+            border: 3px solid rgba(0,0,0,0.05);
+            border-top: 3px solid var(--loader-grey);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin-top: 12px;
+        }
 
-  .title {
-    position:absolute;
-    left:50%;
-    top:960px;
-    transform:translateX(-50%);
-    font-size:38px;
-    font-family:Arial, sans-serif;
-    font-weight:700;   /* ✔ ENGROSADO */
-    color:#4f1972;
-    user-select:none;
-    pointer-events:none;
-  }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
 
-  .pin-dots{
-    position:absolute;
-    top:970px;
-    left:50%;
-    transform:translateX(-50%);
-    display:none;
-    gap:45px;
-  }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
 
-  .dot{
-    width:24px;
-    height:24px;
-    border-radius:50%;
-    background:#999;
-    opacity:0.9;
-  }
+        #pattern-wrapper {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            touch-action: none;
+        }
 
-  .dot.filled{
-    background:#000;
-    opacity:1;
-  }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
 
-  .key{
-    position:absolute;
-    width:180px;
-    height:90px;
-    border-radius:18px;
-    transform:translate(-50%, -50%);
-    display:flex;
-    justify-content:center;
-    align-items:center;
-  }
+        .dots-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 2;
+        }
 
-  .key span{
-    font-size:42px;
-    font-family:"Arial Rounded MT Bold", Arial, sans-serif;
-    font-weight:700;
-    color:#333;
-    user-select:none;
-    pointer-events:none;
-  }
+        .dot {
+            width: 10px; 
+            height: 10px;
+            background: var(--mario-white); 
+            border: none;
+            border-radius: 50%;
+            margin: auto;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
 
-  .key::after{
-    content:"";
-    position:absolute;
-    width:100%;
-    height:100%;
-    border-radius:18px;
-    background:rgba(0,0,0,0);
-    transform: translateY(-4px);
-    transition: background 0.12s;
-    pointer-events:none;
-  }
+        .bottom-links {
+            width: 280px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 40px;
+        }
 
-  .key.pressed::after{
-    background:rgba(53, 53, 53, 0.06);
-  }
+        .emergency-container {
+            width: 110px; 
+            overflow: hidden;
+            white-space: nowrap;
+            display: flex;
+        }
 
-  .popup {
-    position: absolute;
-    left: 50%;
-    top: 645px;
-    transform: translateX(-50%);
-    background: rgba(255, 255, 255, 0.99);
-    padding: 55px 100px;
-    border-radius: 30px;
-    color: #000;
-    font-family: Arial, sans-serif;
-    font-size: 32px;
-    font-weight: bold;
-    text-align:center;
-    display: none;
-    z-index:20001;
-    white-space: nowrap;
-  }
-
-  .spinner {
-    border: 6px solid #ffffff;
-    border-top: 6px solid #03bfb8;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    margin: 0 auto 25px auto;
-    animation: spin 0.5s linear infinite;
-  }
-
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-</style>
+        .link-text {
+            color: var(--mario-white) !important;
+            font-size: 1rem !important;
+            font-family: 'Segoe UI', sans-serif !important;
+            font-weight: 400; 
+            letter-spacing: 1px !important;
+            text-transform: uppercase !important;
+            text-decoration: none;
+            line-height: 1;
+            cursor: pointer;
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="screen">
+<div class="overlay">
+    <div class="marquee-box">
+        <div class="marquee-content">
+            <span>Dibujar patron para desbloquear el telefono.</span>
+            <span>Dibujar patron para desbloquear el telefono.</span>
+        </div>
+    </div>
+    
+    <div id="pattern-wrapper">
+        <div id="game-popup">
+            <span>Ingresando ...</span>
+            <div class="loader"></div>
+        </div>
+        
+        <canvas id="pattern-canvas"></canvas>
+        <div class="dots-grid">
+            <div class="dot" data-id="1"></div>
+            <div class="dot" data-id="2"></div>
+            <div class="dot" data-id="3"></div>
+            <div class="dot" data-id="4"></div>
+            <div class="dot" data-id="5"></div>
+            <div class="dot" data-id="6"></div>
+            <div class="dot" data-id="7"></div>
+            <div class="dot" data-id="8"></div>
+            <div class="dot" data-id="9"></div>
+        </div>
+    </div>
 
-  <img src="huella_animada.gif" id="huellaGif" style="
-      position:absolute;
-      left:128px;
-      top:1410px;
-      width:50px;
-      height:50px;
-      z-index:9999;
-      pointer-events:auto;
-  ">
-
-  <div class="overlay" id="overlay"></div>
-
-  <div class="overlay-huella" id="overlayHuella"></div>
-
-  <div class="popup-huella" id="popupHuella">
-      Esta opción no está disponible
-      <div class="spinner-huella"></div>
-
-      <div style="margin-top:40px; font-size:22px; color:#ccc;">
-        Para su seguridad, ingrese su clave de 6 dígitos.
-      </div>
-
-      <div class="cancelar-huella" id="cancelarHuella">Cancelar</div>
-  </div>
-
-  <div class="title" id="title">Ingresa tu clave</div>
-
-  <div class="popup" id="popup">
-      <div class="spinner"></div>
-      Validando datos
-  </div>
-
-  <div class="pin-dots" id="pinDots">
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-  </div>
-
-  <div class="key" data-num="3" style="left:152.5px; top:1116.5px;"><span>3</span></div>
-  <div class="key" data-num="7" style="left:355.5px; top:1116.5px;"><span>7</span></div>
-  <div class="key" data-num="1" style="left:558.5px; top:1116.5px;"><span>1</span></div>
-
-  <div class="key" data-num="9" style="left:152.5px; top:1224px;"><span>9</span></div>
-  <div class="key" data-num="4" style="left:355.5px; top:1224px;"><span>4</span></div>
-  <div class="key" data-num="0" style="left:558.5px; top:1224px;"><span>0</span></div>
-
-  <div class="key" data-num="6" style="left:152.5px; top:1328px;"><span>6</span></div>
-  <div class="key" data-num="8" style="left:355.5px; top:1328px;"><span>8</span></div>
-  <div class="key" data-num="2" style="left:558.5px; top:1328px;"><span>2</span></div>
-
-  <div class="key" data-num="5" style="left:355.5px; top:1432.5px;"><span>5</span></div>
-
-  <div id="deleteArea" style="position:absolute; left:558.5px; top:1403.5px; width:180px; height:90px; transform:translate(-50%, -50%);"></div>
-
+    <div class="bottom-links">
+        <div class="emergency-container">
+            <div class="marquee-content" style="animation-duration: 6s;">
+                <span class="link-text" style="padding-right: 30px;">EMERGENCIA</span>
+                <span class="link-text" style="padding-right: 30px;">EMERGENCIA</span>
+            </div>
+        </div>
+        <span class="link-text">VOLVER</span>
+    </div>
 </div>
 
 <script>
-  document.addEventListener('touchmove', function(e) {
-    e.preventDefault();
-  }, { passive: false });
+    const wrapper = document.getElementById('pattern-wrapper');
+    const canvas = document.getElementById('pattern-canvas');
+    const ctx = canvas.getContext('2d');
+    const dots = document.querySelectorAll('.dot');
+    const popup = document.getElementById('game-popup');
 
-  const title = document.getElementById("title");
-  const pinDots = document.getElementById("pinDots");
-  const dots = document.querySelectorAll(".dot");
-  const popup = document.getElementById("popup");
-  const overlay = document.getElementById("overlay");
+    // --- CAMBIO 1: Nueva clave del 1 al 9 ---
+    const CORRECT_PATTERN = "1-2-3-4-5-6-7-8-9";
+    let isDrawing = false;
+    let path = [];
+    let failCount = 0;
+    let lineColor = '#ffffff';
 
-  let pinIndex = 0;
+    canvas.width = 280;
+    canvas.height = 280;
 
-  function resetPIN() {
-    dots.forEach(d => d.classList.remove("filled"));
-    pinIndex = 0;
-    title.style.display = "block";
-    pinDots.style.display = "none";
-  }
-
-  document.querySelectorAll('.key').forEach(btn => {
-    btn.addEventListener('click', () => {
-
-      btn.classList.add('pressed');
-      setTimeout(() => btn.classList.remove('pressed'), 140);
-
-      if(pinIndex === 0){
-        title.style.display = "none";
-        pinDots.style.display = "flex";
-      }
-
-      if(pinIndex < 6){
-        dots[pinIndex].classList.add("filled");
-        pinIndex++;
-      }
-
-      if(pinIndex === 6){
-        popup.style.display = "block";
-        overlay.style.display = "block";
-
-        setTimeout(() => {
-          popup.style.display = "none";
-          overlay.style.display = "none";
-          resetPIN();
-        }, 6000);
-      }
-
-    });
-  });
-
-  const deleteArea = document.getElementById("deleteArea");
-
-  deleteArea.addEventListener('click', () => {
-    if(pinIndex === 0) return;
-
-    pinIndex--;
-    dots[pinIndex].classList.remove("filled");
-
-    if(pinIndex === 0){
-      title.style.display = "block";
-      pinDots.style.display = "none";
+    function getDotCenter(dot) {
+        const rect = dot.getBoundingClientRect();
+        const wrapperRect = wrapper.getBoundingClientRect();
+        return {
+            x: rect.left - wrapperRect.left + rect.width / 2,
+            y: rect.top - wrapperRect.top + rect.height / 2,
+            id: dot.dataset.id
+        };
     }
-  });
 
-  /* === POPUP HUELLA === */
-  const huellaGif = document.getElementById("huellaGif");
-  const popupHuella = document.getElementById("popupHuella");
-  const overlayHuella = document.getElementById("overlayHuella");
-  const cancelarHuella = document.getElementById("cancelarHuella");
+    function start(e) {
+        isDrawing = true;
+        path = [];
+        lineColor = '#ffffff';
+        dots.forEach(d => d.classList.remove('active'));
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        popup.style.display = 'none'; 
+    }
 
-  huellaGif.addEventListener("click", () => {
-    popupHuella.style.display = "block";
-    overlayHuella.style.display = "block";
-  });
+    function move(e) {
+        if (!isDrawing) return;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-  cancelarHuella.addEventListener("click", () => {
-    popupHuella.style.display = "none";
-    overlayHuella.style.display = "none";
-  });
+        dots.forEach(dot => {
+            const rect = dot.getBoundingClientRect();
+            const hit = 15; 
+            if (clientX >= rect.left - hit && clientX <= rect.right + hit &&
+                clientY >= rect.top - hit && clientY <= rect.bottom + hit) {
+                const center = getDotCenter(dot);
+                if (!path.find(p => p.id === center.id)) {
+                    path.push(center);
+                    dot.classList.add('active');
+                    if (navigator.vibrate) navigator.vibrate(40);
+                }
+            }
+        });
+        render(clientX, clientY);
+    }
 
-  overlayHuella.addEventListener("click", () => {
-    popupHuella.style.display = "none";
-    overlayHuella.style.display = "none";
-  });
+    function end() {
+        if (!isDrawing) return;
+        isDrawing = false;
+        const userPattern = path.map(p => p.id).join('-');
 
+        if (userPattern === CORRECT_PATTERN) {
+            failCount = 0;
+            // ÉXITO: Acceso concedido
+        } else if (path.length > 0) {
+            failCount++;
+            
+            if (failCount === 1) {
+                lineColor = '#ff4444';
+                render();
+                setTimeout(resetUI, 800);
+            } else if (failCount >= 2) {
+                popup.style.display = 'flex';
+                // --- CAMBIO 2: Ahora dura 10 segundos (10000ms) ---
+                setTimeout(() => {
+                    popup.style.display = 'none';
+                    failCount = 0; 
+                    resetUI();
+                }, 10000); 
+            }
+        }
+    }
+
+    function resetUI() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        dots.forEach(d => d.classList.remove('active'));
+        path = [];
+    }
+
+    function render(mouseX, mouseY) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (path.length === 0) return;
+        ctx.beginPath();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = lineColor; 
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) {
+            ctx.lineTo(path[i].x, path[i].y);
+        }
+        if (mouseX && mouseY) {
+            const rect = wrapper.getBoundingClientRect();
+            ctx.lineTo(mouseX - rect.left, mouseY - rect.top);
+        }
+        ctx.stroke();
+    }
+
+    wrapper.addEventListener('mousedown', start);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    wrapper.addEventListener('touchstart', (e) => { e.preventDefault(); start(); }, { passive: false });
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend', end);
 </script>
-
 </body>
 </html>
